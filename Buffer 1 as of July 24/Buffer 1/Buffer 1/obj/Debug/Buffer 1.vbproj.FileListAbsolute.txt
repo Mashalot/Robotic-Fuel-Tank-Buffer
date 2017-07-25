@@ -1,0 +1,42 @@
+C:\Users\szcze\AppData\Local\Temporary Projects\Buffer 1\bin\Debug\Buffer 1.exe.config
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe.config
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\bin\Debug\Buffer 1.pdb
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\bin\Debug\Buffer 1.xml
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbprojResolveAssemblyReference.cache
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form1.resources
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Resources.resources
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbproj.GenerateResource.Cache
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer 1.exe
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer 1.xml
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer 1.pdb
+C:\Users\szcze\Documents\Visual Studio 2015\Projects\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form2.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe.config
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.pdb
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.xml
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbprojResolveAssemblyReference.cache
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form1.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form2.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form3.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Resources.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbproj.GenerateResource.Cache
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.exe
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.xml
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.pdb
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe.config
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.exe
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.xml
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.pdb
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.exe
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.pdb
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\bin\Debug\Buffer 1.xml
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbprojResolveAssemblyReference.cache
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form1.resources
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form2.resources
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form3.resources
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Resources.resources
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer 1.vbproj.GenerateResource.Cache
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form4.resources
+C:\Users\szcze\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form4.resources
+C:\Users\Russell\Dropbox\Products\TSC\Buffer\Buffer 1\Buffer 1\obj\Debug\Buffer_1.Form5.resources
