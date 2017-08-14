@@ -673,7 +673,7 @@ Public Class Form1
         'buff sides of tank
         If Module1.Process = 10 Then
             TextBox6.Text = TimeString
-            DataGridView1.CurrentRow(TextBox1.Text, Module1.tankLength, Module1.entryWindowTankWidthDouble, TextBox5.Text, TextBox6.Text, TextBox7.Text, TextBox13.Text, TextBox13.Text, TextBox8.Text, TextBox17.Text, TextBox13.Text)
+            'DataGridView1.CurrentRow(TextBox1.Text, Module1.tankLength, Module1.entryWindowTankWidthDouble, TextBox5.Text, TextBox6.Text, TextBox7.Text, TextBox13.Text, TextBox13.Text, TextBox8.Text, TextBox17.Text, TextBox13.Text)
             Dim index As Integer = 1
             Module1.bufferOneTraverseLengthDouble = Module1.tailStockOneOpenWholeNumber + 4
             While index <= 5   'loop 40 times, change to 40 when done testing
@@ -857,9 +857,9 @@ Public Class Form1
             Me.SerialPort2.WriteLine("!30")   'disable axis 3
             Me.SerialPort2.WriteLine("!32")   'disable axis 4
             Me.SerialPort3.WriteLine("b00")   'emergency stop to micro, stop robot
+            Me.SerialPort1.WriteLine("!36")   'turn buffer 1 off
+            Me.SerialPort2.WriteLine("!36")   'turn buffer 2 off
             emergencyStopButton.Text = "Stopped"
-            turn off buffer motors
-
         Else
             emergencyStopButton.Text = "Emergency Stop"
         End If
