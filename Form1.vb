@@ -8,10 +8,20 @@ Module Module1
     Public counter4 As Integer
     Public counter5 As Integer
     Public counter6 As Integer
+    Public counter7 As Integer
+    Public counter8 As Integer
+    Public counter9 As Integer
+    Public counter10 As Integer
+    Public counter11 As Integer
+    Public counter12 As Integer
     Public stringVal As String
-    Public Process As Integer
-    Public ProcessB As Integer
-    Public ProcessC As Integer
+    Public Process As Integer       'main buffer1 process
+    Public ProcessA As Integer      'main buffer2 process
+    Public ProcessB As Integer      'buffer1 wheel measurement process
+    Public ProcessC As Integer      'buffer1 buffing process
+    Public ProcessD As Integer      'buffer2 wheel measurement process
+    Public ProcessE As Integer      'buffer2 buffing process
+
     'Computer and buffer 1 communication, serial port 1
     Public axisOneOKBoolean As Boolean   '*11, *10, *11 = on, *10 = off
     Public axisTwoOKBoolean As Boolean   '*21, *20
@@ -25,16 +35,7 @@ Module Module1
     Public bufferStationOneDoneBuffingBoolean As Boolean   '*99, *98
     Public bufferStationOneHasSuctionBoolean As Boolean   '*a1, *a0
     Public bufferStationOneAvailableBoolean As Boolean
-    Public bufferWheelOneDiameter As Double
-    Public bufferWheelOneDiameterReturn As Double
-    Public bufferWheelOneWholeNumber As Integer
-    Public bufferWheelOneFraction As Decimal
-    Public bufferWheelOneFraction1 As Decimal
     Public bufferStationOneRPM As Integer
-    Public tailStockOneOpen As Decimal
-    Public tailStockOneOpenWholeNumber As Integer
-    Public tailStockOneOpenFraction As Decimal
-    Public tailStockOneOpenFraction1 As Decimal
     Public buffingOneFinishedBoolean As Boolean
 
     'Computer and buffer 2 communication, serial port 2
@@ -47,10 +48,12 @@ Module Module1
     Public endBufferWheelHomeSwitchBoolean As Boolean   '#71, #70
     Public endWheelMeasureSwitchBoolean As Boolean   '#81, #80
     Public endVacuumSuctionSwitchBoolean As Boolean   '#91, #90
-    Public bufferStationTwoAvailableBoolean As Boolean
-    Public bufferTwoMeasuringSwitchBoolean As Boolean
-    Public bufferWheelTwoDiameter As Double
-    Public bufferStationTwoRPM As Double
+    Public endBufferStationTwoDoneBuffingBoolean As Boolean   '#99, #98
+    Public endBufferStationTwoHasSuctionBoolean As Boolean   '#a1, #a0
+    Public endBufferStationTwoAvailableBoolean As Boolean
+    Public endBufferTwoMeasuringSwitchBoolean As Boolean
+    Public endBufferWheelTwoDiameter As Double
+    Public endBufferStationTwoRPM As Double
 
     'Computer and micro communication, serial port 3
     Public entryWindowTankID As String   'storage for tank ID
@@ -69,16 +72,28 @@ Module Module1
     Public exitWindowTankSwitchBoolean As Boolean   'a81, a80, true if exit window tank switch is triggered
 
     'Measurements
+    Public bufferWheelOneDiameter As Double
+    Public bufferWheelOneWholeNumber As Integer
+    Public bufferWheelOneFraction As Decimal
+    Public bufferWheelOneFraction1 As Decimal
+    Public tailStockOneOpen As Decimal
+    Public tailStockOneOpenWholeNumber As Integer
+    Public tailStockOneOpenFraction As Decimal
+    Public tailStockOneOpenFraction1 As Decimal
     Public bufferOneTankLengthDouble As Double
     Public bufferOneTraverseLengthDouble As Double
     Public bufferOneTankLengthString As String
+    Public bufferTwoLength As Double
     Public bufferTwoTankLengthDouble As Double
+    Public bufferTwoTankLengthWholeNumber As Integer
+    Public bufferTwoTankLengthFraction As Decimal
+    Public bufferTwoTankLengthFraction1 As Decimal
+    Public bufferTwoTankLengthDoublePlusTwelve As Double
     Public bufferTwoTankLengthString As String
     Public tankLength1 As Double
     Public tankLength2 As Double
     Public tankLength3 As Double
     Public tankLength As Double = tankLength1 + tankLength2
-    Public tankLengthBoolean As Boolean   'true if we have tank length
 
     Public entryWindowTankWidthDouble As Double
     Public entryWindowTankWidthString As String
@@ -185,6 +200,12 @@ Public Class Form1
         Else
             Module1.bufferStationOneAvailableBoolean = True
         End If
+        'if buffer 2 has suction, it's not available
+        If Module1.endBufferStationTwoHasSuctionBoolean = True Then
+            Module1.endBufferStationTwoAvailableBoolean = False
+        Else
+            Module1.endBufferStationTwoAvailableBoolean = True
+        End If
         'if there's a tank in exit window, it's not available
         If Module1.exitWindowTankSwitchBoolean = True And Module1.exitWindowAvailableBoolean = True Then
             Module1.exitWindowAvailableBoolean = False
@@ -198,6 +219,9 @@ Public Class Form1
                     Timer1.Enabled = False
                     Timer2.Enabled = False
                     Timer3.Enabled = False
+                    Timer4.Enabled = False
+                    Timer5.Enabled = False
+                    Timer6.Enabled = False
                     MsgBox("Error. Robot not in position. Please wait for polishing to finish. When finished, turn power off and fix the issue.")
                     Exit While
                 Else
@@ -206,7 +230,7 @@ Public Class Form1
             End While
         End If
     End Sub
-    'Buffer 1 processes
+    'Main Buffer Station 1 Timer
     Private Sub Timer2_Tick(sender As Object, e As EventArgs) Handles Timer2.Tick
         'if buffer 1 available and entry window closed, if buffer wheel has been measured without error, send robot to entry window, robot suction on, move tail stock to 6" outside tank length
         If Module1.Process = 1 And Module1.ProcessB = 4 And Module1.bufferStationOneAvailableBoolean = True And Module1.entryWindowClosedSwitchBoolean = True Then
@@ -227,6 +251,7 @@ Public Class Form1
             Module1.tailStockOneOpen = 102.5 - Module1.bufferOneTankLengthDouble - 6    'calculate how far to open tail stock
             Module1.tailStockOneOpenWholeNumber = Math.Truncate(Module1.tailStockOneOpen)
             Module1.tailStockOneOpenFraction = Module1.tailStockOneOpen - Module1.tailStockOneOpenWholeNumber
+
             If Module1.tailStockOneOpenFraction = 0 Then
                 Module1.tailStockOneOpenFraction1 = 0
             ElseIf Module1.tailStockOneOpenFraction = 0.125 Then
@@ -376,14 +401,14 @@ Public Class Form1
             Module1.Process = 10
         End If
 
-        'look at timer 4 to see buffing algorithm
+        'look at timer 4 to see buffer station 1 algorithm
 
-        'Once the tank is done buffing, if exit window is available and no tank in exit window tray, send robot to get the tank and turn robot suction on
-        If Module1.Process = 11 And Module1.axisOneOKBoolean = True And Module1.exitWindowAvailableBoolean = True And Module1.exitWindowTankSwitchBoolean = False Then
+        'Once the tank is done at buffer 1, if buffer 1 carriage and tail stock are home, and if buffer 2 is available, send robot to get the tank and turn robot suction on
+        If Module1.Process = 11 And Module1.axisOneOKBoolean = True And Module1.axisTwoOKBoolean And Module1.endBufferStationTwoAvailableBoolean = True Then
             SerialPort3.WriteLine("send robot to get tank at buffer 1, post buffing")
             SerialPort3.WriteLine("b21" & " turn robot suction on")
-            Module1.buffingOneFinishedBoolean = False
-            Module1.robotInPositionBoolean = False  'might delete this
+            Module1.buffingOneFinishedBoolean = False   'testing purposes
+            Module1.robotInPositionBoolean = False  'testing purposes
             Module1.Process = 12
         End If
 
@@ -433,56 +458,49 @@ Public Class Form1
             End If
         End While
 
-        'if tail stock in position, send tail stock to home position and tell robot to move tank from buffer 1 to exit window
+        'send buffer 1 tail stock home, prepare buffer2, move buffer2 buffing wheel and ensure tail stock is home
         If Module1.Process = 15 And Module1.robotHasSuctionBoolean = True And Module1.axisTwoOKBoolean = True Then
             SerialPort1.WriteLine("$2R0" & Module1.tailStockOneOpenWholeNumber & "E" & Module1.tailStockOneOpenFraction1 & " move tail stock back to home position")
-
-            'SerialPort3.WriteLine("tell robot to move tank from buffer 1 to buffer 2")
-
-            SerialPort3.WriteLine("tell robot to move tank from buffer 1 to exit window")
+            Module1.bufferTwoTankLengthDouble = Module1.bufferOneTankLengthDouble 'tank length in buffer1 becomes tank length in buffer2
+            Module1.bufferTwoTankLengthDoublePlusTwelve = 102.5 - Module1.bufferTwoTankLengthDouble + 12 'tank length plus 12"
+            'need to measure length from buffer wheel center to far end of tank, using 102.5 for now as a place holder
+            Module1.bufferTwoTankLengthWholeNumber = Math.Truncate(Module1.bufferTwoTankLengthDoublePlusTwelve) 'buffer2 tank length whole number in inches
+            Module1.bufferTwoTankLengthFraction = Module1.bufferTwoTankLengthDoublePlusTwelve - Module1.bufferTwoTankLengthWholeNumber 'buffer2 tank length minus whole inches, just the fractional remainder
+            If Module1.bufferTwoTankLengthFraction = 0 Then
+                Module1.bufferTwoTankLengthFraction1 = 0
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.125 Then
+                Module1.bufferTwoTankLengthFraction1 = 1
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.25 Then
+                Module1.bufferTwoTankLengthFraction1 = 2
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.375 Then
+                Module1.bufferTwoTankLengthFraction1 = 3
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.5 Then
+                Module1.bufferTwoTankLengthFraction1 = 4
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.625 Then
+                Module1.bufferTwoTankLengthFraction1 = 5
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.75 Then
+                Module1.bufferTwoTankLengthFraction1 = 6
+            ElseIf Module1.bufferTwoTankLengthFraction = 0.875 Then
+                Module1.bufferTwoTankLengthFraction1 = 7
+            Else
+                Module1.bufferTwoTankLengthFraction1 = 0
+            End If
+            Module1.bufferTwoTankLengthString = Module1.bufferOneTankLengthString 'buffer1 tank length string becomes buffer 2 tank length string
+            Module1.bufferTwoTankID = Module1.bufferOneTankID 'buffer1 tank ID becomes buffer2 tank ID
+            Module1.bufferTwoTankWidthDouble = Module1.bufferOneTankWidthDouble 'buffer1 tank width becomes buffer2 tank width
+            SerialPort2.WriteLine("$3F0" & Module1.bufferTwoTankLengthWholeNumber & "E" & Module1.bufferTwoTankLengthFraction1 & " move buffer 2 buffing wheel to tank length plus 12")
             Module1.robotInPositionBoolean = False
             Module1.axisTwoOKBoolean = False
             Module1.Process = 16
         End If
 
-        'if robot is in position at exit window, release suction
-        If Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = True Then
-            SerialPort3.WriteLine("b20" & " release robot suction")
-            'did robot release suction on tank?
-            While Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = True
-                System.Threading.Thread.Sleep(1000)
-                Module1.counter6 += 1
-                SerialPort3.WriteLine(counter6)
-                If Module1.counter6 = 10 Then
-                    Module1.Process = 99
-                    Timer1.Enabled = False
-                    Timer2.Enabled = False
-                    Timer3.Enabled = False
-                    MsgBox("Error. Robot not releasing suction. Remove power and correct issue")
-                    Exit While
-                ElseIf Module1.counter6 < 10 And Module1.robotHasSuctionBoolean = False Then
-                    SerialPort3.WriteLine("robot has released tank")
-                    SerialPort3.WriteLine("b61" & " send robot home")
-                    Module1.Process = 17
-                    Exit While
-                End If
-            End While
-        ElseIf Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = False Then
-            Module1.exitWindowTankID = Module1.bufferOneTankID
-            TextBox4.Text = Module1.exitWindowTankID
-            Module1.exitWindowTankLengthString = Module1.bufferOneTankLengthString
-            TextBox12.Text = Module1.exitWindowTankLengthString
-            Module1.exitWindowTankWidthDouble = Module1.bufferOneTankWidthDouble
-            TextBox16.Text = Module1.exitWindowTankWidthDouble
-            'Module1.bufferStationOneAvailableBoolean = True
-            Module1.Process = 17
+        'if buffer 2 buffing wheel and buffer 2 tail stock are in position, move tank from buffer 1 to buffer 2
+        If Module1.Process = 16 And Module1.endAxisTwoOKBoolean = True And Module1.endAxisOneOKBoolean = True Then
+            SerialPort3.WriteLine("tell robot to move tank from buffer 1 to buffer 2")
+            Module1.ProcessA = 1
+            Timer6.Enabled = True
         End If
 
-        'open exit window for personnel to remove tank
-        If Module1.Process = 17 Then
-            SerialPort3.WriteLine("b41" & " open exit window")
-            Module1.Process = 99
-        End If
         'reset everything and stop timer 2, 3, 4, end the process chain
         If Module1.Process = 99 Then
             Timer2.Enabled = False
@@ -518,7 +536,7 @@ Public Class Form1
             Module1.entryWindowAvailableBoolean = True
         End If
     End Sub
-    'get buffer wheel 1 measurement
+    'get buffer 1 wheel measurement
     Private Sub Timer3_Tick(sender As Object, e As EventArgs) Handles Timer3.Tick
         'advance the piston, move buffer wheel up to where an 18" wheel should press measuring switch, 16.5" - 9" = 7.5"
         If Module1.ProcessB = 1 Then
@@ -729,52 +747,382 @@ Public Class Form1
             End While
         End If
 
-
-
     End Sub
-    'errors timer
+    'Main Buffer Station 2 timer
     Private Sub Timer6_Tick(sender As Object, e As EventArgs) Handles Timer6.Tick
-        'just for handling errors where we have to wait for buffing to finish
-        If Module1.Process = 98 And Timer4.Enabled = True Then
-            If Timer4.Enabled = False Then
+        'carriage should be home And prepared For incoming tank, tail stock should be in home position prepared for incoming tank,
+        'if robot is in position at buffer 2, turn buffer 2 suction on
+        If Module1.ProcessA = 1 And Module1.robotInPositionBoolean = True Then
+            SerialPort2.WriteLine("!21" & " turn buffer 2 suction on")
+            'move tail stock in, tank width
+            Module1.ProcessA = 2
+        End If
+
+        'does buffer 2 have suction? 10 seconds to say yes, if yes, turn robot suction off
+        While Module1.ProcessA = 2 And Module1.endBufferStationTwoHasSuctionBoolean = False And Module1.endAxisTwoOKBoolean = True
+            System.Threading.Thread.Sleep(1000)
+            Module1.counter7 += 1
+            SerialPort3.WriteLine(counter7 & " does buffer 2 have suction?")
+            If Module1.counter7 >= 10 Then
+                Timer1.Enabled = False
+                Timer6.Enabled = False
+                'Timer7.Enabled = False
+                'Timer8.Enabled = False
+                MsgBox("Error, buffer 2 does not have suction.")
+                SerialPort3.WriteLine("tell robot to stay in place")
+                'If Module1.robotInPositionBoolean = True Then
+                '    SerialPort3.WriteLine("b20" & " release suction if robot in position")
+                '    Dim counter As Integer = 1
+                '    'did robot release suction?
+                '    While Module1.robotHasSuctionBoolean = True
+                '        System.Threading.Thread.Sleep(1000)
+                '        counter += 0
+                '        SerialPort3.WriteLine(counter & " did robot release suction on the tank?")
+                '        If counter = 10 Then
+                '            Module1.Process = 99
+                '            Timer1.Enabled = False
+                '            Timer6.Enabled = False
+                '            'Timer7.Enabled = False
+                '            'Timer8.Enabled = False
+                '            MsgBox("Error, robot not releasing suction. Let polishing finish, then remove power and correct issue.")
+                '            Exit While
+                '        ElseIf counter < 10 And Module1.robotHasSuctionBoolean = False Then
+                '            Timer1.Enabled = False
+                '            Timer6.Enabled = False
+                '            'Timer7.Enabled = False
+                '            'Timer8.Enabled = False
+                '            SerialPort3.WriteLine("Robot has returned tank to position. Let polishing finish, then remove power and correct issue.")
+                '            SerialPort3.WriteLine("b61" & " send robot home")
+                '            Exit While
+                '        End If
+                '    End While
+                '    Exit While
+                'End If
+            ElseIf Module1.counter7 < 10 And Module1.endBufferStationTwoHasSuctionBoolean = True Then
+                SerialPort3.WriteLine("b20" & " release robot suction because buffer 2 has suction now")
+                Module1.ProcessA = 3
+                Module1.endAxisTwoOKBoolean = False
+                Exit While
+            End If
+        End While
+
+        'did robot release suction on tank? 10 seconds to say yes
+        While Module1.ProcessA = 3 And Module1.robotHasSuctionBoolean = True
+            System.Threading.Thread.Sleep(1000)
+            Module1.counter8 += 1
+            SerialPort3.WriteLine(counter8 & " did robot release suction on the tank?")
+            If Module1.counter8 = 10 Then
                 Module1.Process = 99
+                Timer1.Enabled = False
+                Timer6.Enabled = False
+                'Timer7.Enabled = False
+                'Timer8.Enabled = False
+                MsgBox("Error, robot not releasing suction. Let buffing finish, then remove power and correct issue.")
+                Exit While
+            ElseIf Module1.counter8 < 10 And Module1.robotHasSuctionBoolean = False Then
+                SerialPort3.WriteLine("robot has released tank")
+                SerialPort3.WriteLine("b61" & " send robot home")
+                Module1.ProcessA = 4
+                Timer7.Enabled = True
+                Exit While
+            End If
+        End While
+
+        'measure buffer2 buffing wheel diameter, set speed, turn buffer on, is method for measuring buffing wheel 2 identical to buffing wheel 1???
+        'move carriage to buffing wheel, center of tank should be lined up with buffing wheel,
+        'move carriage forward half of tank width plus 6 inches,
+        'move carriage back tank width plus 12", Move buffer up 1 increment, Move carriage forward tank width plus 12, Move buffer up, repeat 40 times,
+        'retract buffing wheel, Move To home position, Move cradle To home position, send tail stock To home position,
+        'If all Then axes are ok, And Exit window Is available, send robot To buffer 2, turn robot suction On,
+        'does robot have suction?10Seconds, release buffer2 suction 10Seconds,
+        'tell robot to move tank to exit window
+
+
+
+
+
+        '    'Once the tank is done buffing, if exit window is available and no tank in exit window tray, send robot to get the tank and turn robot suction on
+        '    If Module1.Process = 11 And Module1.axisOneOKBoolean = True And Module1.exitWindowAvailableBoolean = True And Module1.exitWindowTankSwitchBoolean = False Then
+        '        SerialPort3.WriteLine("send robot To Get tank at buffer 1, post buffing")
+        '        SerialPort3.WriteLine("b21" & " turn robot suction On")
+        '        Module1.buffingOneFinishedBoolean = False
+        '        Module1.robotInPositionBoolean = False  'might delete this
+        '        Module1.Process = 12
+        '    End If
+
+        '    'if robot is in position at buffer 1,
+        '    If Module1.Process = 12 And Module1.robotInPositionBoolean = True Then
+        '        SerialPort3.WriteLine("robot In position")
+        '        Module1.Process = 13
+        '    End If
+
+        '    'does robot have suction at buffer 1? 10 seconds to say yes, if yes, turn buffer 1 suction off
+        '    While Module1.Process = 13 And Module1.robotHasSuctionBoolean = False
+        '        System.Threading.Thread.Sleep(1000)
+        '        Module1.counter4 += 1
+        '        SerialPort3.WriteLine(counter4)
+        '        If Module1.counter4 = 10 Then
+        '            Module1.Process = 99
+        '            Timer1.Enabled = False
+        '            Timer2.Enabled = False
+        '            Timer3.Enabled = False
+        '            MsgBox("Error, robot does Not have suction. Let buffing finish, then remove power And correct issue.")
+        '            Exit While
+        '        ElseIf Module1.counter4 < 10 And Module1.robotHasSuctionBoolean = True Then
+        '            SerialPort3.WriteLine("robot has suction at buffer 1")
+        '            SerialPort1.WriteLine("!22 " & "turn buffer 1 suction off")
+        '            Module1.Process = 14
+        '            Exit While
+        '        End If
+        '    End While
+
+        '    'is buffer 1 suction off? 10 seconds to turn off
+        '    While Module1.Process = 14 And Module1.bufferStationOneHasSuctionBoolean = True And Module1.axisTwoOKBoolean = True
+        '        System.Threading.Thread.Sleep(1000)
+        '        Module1.counter5 += 1
+        '        SerialPort3.WriteLine(counter5 & " does buffer 1 have suction?")
+        '        If Module1.counter5 = 10 Then
+        '            Module1.Process = 99
+        '            Timer1.Enabled = False
+        '            Timer2.Enabled = False
+        '            Timer3.Enabled = False
+        '            MsgBox("Error, Buffer 1 still has suction. Remove power And correct issue.")
+        '            Exit While
+        '        ElseIf Module1.counter5 < 10 And Module1.bufferStationOneHasSuctionBoolean = False Then
+        '            SerialPort1.WriteLine("$2R006E0" & " move tail stock out 6 inches, Now that buffer 1 doesn't have suction")
+        '            Module1.Process = 15
+        '            Module1.axisTwoOKBoolean = False
+        '            Exit While
+        '        End If
+        '    End While
+
+        '    'if tail stock in position, send tail stock to home position and tell robot to move tank from buffer 1 to exit window
+        '    If Module1.Process = 15 And Module1.robotHasSuctionBoolean = True And Module1.axisTwoOKBoolean = True Then
+        '        SerialPort1.WriteLine("$2R0" & Module1.tailStockOneOpenWholeNumber & "E" & Module1.tailStockOneOpenFraction1 & " move tail stock back to home position")
+
+        '        'SerialPort3.WriteLine("tell robot to move tank from buffer 1 to buffer 2")
+
+        '        SerialPort3.WriteLine("tell robot to move tank from buffer 1 to exit window")
+        '        Module1.robotInPositionBoolean = False
+        '        Module1.axisTwoOKBoolean = False
+        '        Module1.Process = 16
+        '    End If
+
+        '    'if robot is in position at exit window, release suction
+        '    If Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = True Then
+        '        SerialPort3.WriteLine("b20" & " release robot suction")
+        '        'did robot release suction on tank?
+        '        While Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = True
+        '            System.Threading.Thread.Sleep(1000)
+        '            Module1.counter6 += 1
+        '            SerialPort3.WriteLine(counter6)
+        '            If Module1.counter6 = 10 Then
+        '                Module1.Process = 99
+        '                Timer1.Enabled = False
+        '                Timer2.Enabled = False
+        '                Timer3.Enabled = False
+        '                MsgBox("Error. Robot not releasing suction. Remove power and correct issue")
+        '                Exit While
+        '            ElseIf Module1.counter6 < 10 And Module1.robotHasSuctionBoolean = False Then
+        '                SerialPort3.WriteLine("robot has released tank")
+        '                SerialPort3.WriteLine("b61" & " send robot home")
+        '                Module1.Process = 17
+        '                Exit While
+        '            End If
+        '        End While
+        '    ElseIf Module1.Process = 16 And Module1.robotInPositionBoolean = True And Module1.robotHasSuctionBoolean = False Then
+        '        Module1.exitWindowTankID = Module1.bufferOneTankID
+        '        TextBox4.Text = Module1.exitWindowTankID
+        '        Module1.exitWindowTankLengthString = Module1.bufferOneTankLengthString
+        '        TextBox12.Text = Module1.exitWindowTankLengthString
+        '        Module1.exitWindowTankWidthDouble = Module1.bufferOneTankWidthDouble
+        '        TextBox16.Text = Module1.exitWindowTankWidthDouble
+        '        'Module1.bufferStationOneAvailableBoolean = True
+        '        Module1.Process = 17
+        '    End If
+
+        '    'open exit window for personnel to remove tank
+        '    If Module1.Process = 17 Then
+        '        SerialPort3.WriteLine("b41" & " open exit window")
+        '        Module1.Process = 99
+        '    End If
+        '    'reset everything and stop timer 2, 3, 4, end the process chain
+        '    If Module1.Process = 99 Then
+        '        Timer2.Enabled = False
+        '        Timer3.Enabled = False
+        '        Timer4.Enabled = False
+        '        Module1.entryTankSwitchBoolean = False
+        '        Module1.measurementsBoolean = False
+        '        Module1.entryWindowTankWidthDouble = 0
+        '        Module1.tankLength = 0
+        '        Module1.tankLength1 = 0
+        '        Module1.tankLength2 = 0
+        '        TextBox1.Text = ""
+        '        TextBox9.Text = ""
+        '        TextBox13.Text = ""
+        '        Module1.counter1 = 0
+        '        Module1.counter2 = 0
+        '        Module1.counter3 = 0
+        '        Module1.counter4 = 0
+        '        Module1.counter5 = 0
+        '        Module1.counter6 = 0
+        '        Module1.tailStockOneOpen = 0
+        '        Module1.tailStockOneOpenWholeNumber = 0
+        '        Module1.tailStockOneOpenFraction = 0
+        '        Module1.robotHasSuctionBoolean = False  'only here for testing
+        '        Module1.robotInPositionBoolean = False  'only here for testing
+        '        Module1.axisOneOKBoolean = False
+        '        Module1.axisTwoOKBoolean = False
+        '        Module1.axisThreeOKBoolean = False
+        '        Module1.axisFourOKBoolean = False
+        '        Module1.bufferStationOneHasSuctionBoolean = False
+        '        Module1.bufferOneMeasuringSwitchBoolean = False
+        '        Module1.buffingOneFinishedBoolean = False
+        '        Module1.entryWindowAvailableBoolean = True
+        '    End If
+    End Sub
+    'Buffer Station 2 buffing wheel measurement timer
+    Private Sub Timer7_Tick(sender As Object, e As EventArgs) Handles Timer7.Tick
+        'to measure buffer2 buffing wheel
+        'home axis 4 and then home axis 3
+
+        'once that's done, send buffing wheel up axis 4 35"
+        'send wheel forward 20", then begin measuring until switch is hit, once measurement is taken calculate RPM, move wheel back to home on axis 3
+        'move wheel back down to home on axis 4, tell timer 6 we're ready to go
+
+        'Get buffer2 wheel measurement and calculate RPM
+        If Module1.ProcessD = 1 And Module1.endAxisThreeOKBoolean = True And Module1.endBufferTwoMeasuringSwitchBoolean = False Then
+            Me.SerialPort2.WriteLine("$3F000E4")
+            Module1.endBufferWheelTwoDiameter -= 0.5
+            Module1.axisThreeOKBoolean = False
+        ElseIf Module1.ProcessD = 2 And Module1.axisThreeOKBoolean = True And Module1.bufferOneMeasuringSwitchBoolean = True Then
+            If Module1.bufferWheelOneDiameter = 18 Or Module1.bufferWheelOneDiameter = 17.5 Then
+                'Me.SerialPort1.WriteLine("!11")
+                Me.SerialPort3.WriteLine("!11")
+                Module1.ProcessD = 3
+            ElseIf Module1.bufferWheelOneDiameter = 17 Or Module1.bufferWheelOneDiameter = 16.5 Then
+                'Me.SerialPort1.WriteLine("!12")
+                Me.SerialPort3.WriteLine("!12")
+                Module1.ProcessD = 3
+            ElseIf Module1.bufferWheelOneDiameter = 16 Or Module1.bufferWheelOneDiameter = 15.5 Then
+                'Me.SerialPort1.WriteLine("!13")
+                Me.SerialPort3.WriteLine("!13")
+                Module1.ProcessD = 3
+            ElseIf Module1.bufferWheelOneDiameter = 15 Or Module1.bufferWheelOneDiameter = 14.5 Then
+                'Me.SerialPort1.WriteLine("!14")
+                Me.SerialPort3.WriteLine("!14")
+                Module1.ProcessD = 3
+            ElseIf Module1.bufferWheelOneDiameter = 14 Or Module1.bufferWheelOneDiameter = 13.5 Then
+                Timer1.Enabled = False
+                Timer2.Enabled = False
+                Timer3.Enabled = False
+                Timer4.Enabled = False
+                Dim result As Integer
+                result = MessageBox.Show("Error, buffing wheel at 14 inches. Needs to be changed soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
+                If result = DialogResult.No Then
+                    Me.SerialPort1.WriteLine("!10" & " stop buffer wheel")
+                    Me.SerialPort1.WriteLine("!24" & " retract piston")
+                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
+                    While Module1.bufferWheelHomeSwitchBoolean = False
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort1.WriteLine("$3R000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    While Module1.bufferWheelHomeSwitchBoolean = True
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort1.WriteLine("$3F000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    Module1.bufferWheelOneDiameter = 18
+                    Module1.ProcessD = 1
+                    Timer1.Enabled = True
+                    Timer2.Enabled = True
+                    Timer3.Enabled = True
+                    Timer4.Enabled = True
+                    Module1.Process = 99
+                End If
+                If result = DialogResult.Yes Then
+                    'Me.SerialPort1.WriteLine("!15")
+                    Me.SerialPort3.WriteLine("!15")
+                    Module1.ProcessD = 3
+                    Timer3.Enabled = True
+                End If
+            ElseIf Module1.bufferWheelOneDiameter = 13 Then
+                Timer3.Enabled = False
+                Dim result As Integer
+                result = MessageBox.Show("Error, buffing wheel at 13 inches. Needs to be changed very soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
+                If result = DialogResult.No Then
+                    Timer1.Enabled = False
+                    Timer2.Enabled = False
+                    Timer3.Enabled = False
+                    Timer4.Enabled = False
+                    Me.SerialPort1.WriteLine("!10" & " stop buffer wheel")
+                    Me.SerialPort1.WriteLine("!24" & " retract piston")
+                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
+                    While Module1.bufferWheelHomeSwitchBoolean = False
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort1.WriteLine("$3R000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    While Module1.bufferWheelHomeSwitchBoolean = True
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort1.WriteLine("$3F000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    Module1.bufferWheelOneDiameter = 18
+                    Module1.ProcessD = 1
+                    Timer1.Enabled = True
+                    Timer2.Enabled = True
+                    Timer3.Enabled = True
+                    Timer4.Enabled = True
+                    Module1.Process = 99
+                End If
+                If result = DialogResult.Yes Then
+                    'Me.SerialPort1.WriteLine("!16")
+                    Me.SerialPort3.WriteLine("!16")
+                    Module1.ProcessD = 3
+                    Timer3.Enabled = True
+                End If
+            ElseIf Module1.bufferWheelOneDiameter < 13 Then
+                Timer1.Enabled = False
+                Timer2.Enabled = False
+                Timer3.Enabled = False
+                Timer4.Enabled = False
+                Dim result As Integer
+                result = MessageBox.Show("Error, buffing wheel must be changed.", "Error", MessageBoxButtons.OK)
+                If result = DialogResult.OK Then
+                    Me.SerialPort1.WriteLine("!24" & " retract piston")
+                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
+                    While Module1.bufferWheelHomeSwitchBoolean = False
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort1.WriteLine("$3R000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    While Module1.bufferWheelHomeSwitchBoolean = True
+                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort1.WriteLine("$3F000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    Module1.bufferWheelOneDiameter = 18
+                    Module1.ProcessD = 1
+                    Timer1.Enabled = True
+                    Timer2.Enabled = True
+                    Timer3.Enabled = True
+                    Timer4.Enabled = True
+                    Module1.Process = 99
+                End If
             End If
         End If
-        'if there's an error that requires everything shut down
-        If Module1.Process = 100 Then
-            Timer1.Enabled = False
-            Timer2.Enabled = False
-            Timer3.Enabled = False
-            Timer4.Enabled = False
-            Module1.entryTankSwitchBoolean = False
-            Module1.measurementsBoolean = False
-            Module1.entryWindowTankWidthDouble = 0
-            Module1.tankLength = 0
-            Module1.tankLength1 = 0
-            Module1.tankLength2 = 0
-            TextBox1.Text = ""
-            TextBox9.Text = ""
-            TextBox13.Text = ""
-            Module1.counter1 = 0
-            Module1.counter2 = 0
-            Module1.counter3 = 0
-            Module1.counter4 = 0
-            Module1.counter5 = 0
-            Module1.counter6 = 0
-            Module1.tailStockOneOpen = 0
-            Module1.tailStockOneOpenWholeNumber = 0
-            Module1.tailStockOneOpenFraction = 0
-            Module1.robotHasSuctionBoolean = False  'only here for testing
-            Module1.robotInPositionBoolean = False  'only here for testing
-            Module1.axisOneOKBoolean = False
-            Module1.axisTwoOKBoolean = False
-            Module1.axisThreeOKBoolean = False
-            Module1.axisFourOKBoolean = False
-            Module1.bufferStationOneHasSuctionBoolean = False
-            Module1.bufferOneMeasuringSwitchBoolean = False
-            Module1.buffingOneFinishedBoolean = False
-            Module1.entryWindowAvailableBoolean = True
-        End If
+    End Sub
+    'Buffer station 2 buffing process timer
+    Private Sub Timer8_Tick(sender As Object, e As EventArgs) Handles Timer8.Tick
+
     End Sub
 
     'Start Button
@@ -801,8 +1149,12 @@ Public Class Form1
         If Module1.entryWindowClosedSwitchBoolean = True Then
             Timer2.Enabled = True
             Timer3.Enabled = True
-            Module1.Process = 1
-            Module1.ProcessB = 1
+            Timer6.Enabled = True
+            Timer7.Enabled = True
+            Module1.Process = 1     'main buffer1 process startup
+            Module1.ProcessB = 1    'buffer1 buffing wheel measurement startup
+            Module1.ProcessA = 1    'main buffer2 process startup
+            Module1.ProcessD = 1    'buffer2 buffing wheel measurement startup
         Else
             MsgBox("Error, entry window not closed")
             Exit Sub
@@ -1165,6 +1517,30 @@ Public Class Form1
             incoming3 = 0
             incoming4 = 0
             incoming5 = 0
+        End If
+        If incoming = 35 And incoming1 = 57 And incoming2 = 57 Then '#99, buffer 2 done buffing
+            Module1.endBufferStationTwoDoneBuffingBoolean = True
+            incoming = 0
+            incoming1 = 0
+            incoming2 = 0
+        End If
+        If incoming = 35 And incoming1 = 57 And incoming2 = 56 Then '#98, buffer 2 done buffing
+            Module1.endBufferStationTwoDoneBuffingBoolean = False
+            incoming = 0
+            incoming1 = 0
+            incoming2 = 0
+        End If
+        If incoming = 35 And incoming1 = 97 And incoming2 = 49 Then    '#a1, buffer 2 has suction
+            Module1.endBufferStationTwoHasSuctionBoolean = True
+            incoming = 0
+            incoming1 = 0
+            incoming2 = 0
+        End If
+        If incoming = 35 And incoming1 = 97 And incoming2 = 48 Then    '#a0, buffer 2 does not have suction
+            Module1.endBufferStationTwoHasSuctionBoolean = False
+            incoming = 0
+            incoming1 = 0
+            incoming2 = 0
         End If
     End Sub
     Public Sub SerialPort3_DataReceived(sender As Object, e As IO.Ports.SerialDataReceivedEventArgs) Handles SerialPort3.DataReceived
@@ -1813,34 +2189,5 @@ Public Class Form1
         End If
     End Sub
 
-    'when buffer 1 is finished, the buffer wheel should be at the measuring switch
-    'tail stock should be home, and carriage should be home
-    'before you can send the robot to get the tank from buffer 1, to move it to buffer 2,
-    'have to check if buffer 2 is available, if buffer 2 has suction, it's not available
-    'if buffer 2 is available?
-    'if yes, send robot to tank
-    'is robot in position? 10 seconds to respond
-    'does robot have suction? 10 seconds to respond
-    'move buffing station 2 cradle to home position
-    'move buffer 2 buffing wheel to tank length plus 12
-    'if everything good so far, move tank to buffing station 2
-    'move buffers to tank length
-    'engage buffer 2 suction
-    'is suction good? 10 seconds to respond
-    'check buffer diameter, set buffer speed, turn buffer on
-    'move buffer to tank length
-    'move tank so that buffer is at center of tank
-    'move tank half Of tank diameter In positive y axis direction plus 6 inches
-    'run buffer the width Of tank
-    'move buffer up
-    'run buffer the width Of tank again
-    'so on And so forth until tank ends are buffed depending on measurements
-    'move cradle tank In reverse diameter plus 12 inches
-    'repeat dependent On tank diameter
-    'retract buffer
-    'move buffer To measurement spot
-    'move cradle To home position
-    'tell robot To move To buffer 2 position, Using previous variables
-    'Is robot ok? Check for 10 seconds
-    'Is suction good? Within 10 seconds otherwise error message
+
 End Class
