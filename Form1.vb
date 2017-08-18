@@ -43,7 +43,7 @@ Module Module1
     Public endAxisTwoOKBoolean As Boolean   '#21, #20
     Public endAxisThreeOKBoolean As Boolean   '#31, #30
     Public endAxisFourOKBoolean As Boolean   '#41, #40
-    Public endTailStockHomeSwitchBoolean As Boolean   '#51, #50
+    Public endBufferWheelVerticalHomeSwitchBoolean As Boolean   '#51, #50
     Public endCarriageHomeSwitchBoolean As Boolean   '#61, #60
     Public endBufferWheelHomeSwitchBoolean As Boolean   '#71, #70
     Public endWheelMeasureSwitchBoolean As Boolean   '#81, #80
@@ -51,7 +51,6 @@ Module Module1
     Public endBufferStationTwoDoneBuffingBoolean As Boolean   '#99, #98
     Public endBufferStationTwoHasSuctionBoolean As Boolean   '#a1, #a0
     Public endBufferStationTwoAvailableBoolean As Boolean
-    Public endBufferTwoMeasuringSwitchBoolean As Boolean
     Public endBufferWheelTwoDiameter As Double
     Public endBufferStationTwoRPM As Double
 
@@ -90,6 +89,9 @@ Module Module1
     Public bufferTwoTankLengthFraction1 As Decimal
     Public bufferTwoTankLengthDoublePlusTwelve As Double
     Public bufferTwoTankLengthString As String
+    Public endBufferWheelTwoRetract As Double
+    Public endBufferWheelTwoRetractWholeNumber As Integer
+    Public endBufferWheelTwoRetractFraction As Decimal
     Public tankLength1 As Double
     Public tankLength2 As Double
     Public tankLength3 As Double
@@ -583,6 +585,7 @@ Public Class Form1
                     Me.SerialPort1.WriteLine("!10" & " stop buffer wheel")
                     Me.SerialPort1.WriteLine("!24" & " retract piston")
                     Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
+                    System.Threading.Thread.Sleep(500)
                     While Module1.bufferWheelHomeSwitchBoolean = False
                         If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
                             Me.SerialPort1.WriteLine("$3R000E4")
@@ -766,8 +769,8 @@ Public Class Form1
             If Module1.counter7 >= 10 Then
                 Timer1.Enabled = False
                 Timer6.Enabled = False
-                'Timer7.Enabled = False
-                'Timer8.Enabled = False
+                Timer7.Enabled = False
+                Timer8.Enabled = False
                 MsgBox("Error, buffer 2 does not have suction.")
                 SerialPort3.WriteLine("tell robot to stay in place")
                 'If Module1.robotInPositionBoolean = True Then
@@ -806,30 +809,40 @@ Public Class Form1
             End If
         End While
 
-        'did robot release suction on tank? 10 seconds to say yes
-        While Module1.ProcessA = 3 And Module1.robotHasSuctionBoolean = True
-            System.Threading.Thread.Sleep(1000)
-            Module1.counter8 += 1
-            SerialPort3.WriteLine(counter8 & " did robot release suction on the tank?")
-            If Module1.counter8 = 10 Then
-                Module1.Process = 99
-                Timer1.Enabled = False
-                Timer6.Enabled = False
-                'Timer7.Enabled = False
-                'Timer8.Enabled = False
-                MsgBox("Error, robot not releasing suction. Let buffing finish, then remove power and correct issue.")
-                Exit While
-            ElseIf Module1.counter8 < 10 And Module1.robotHasSuctionBoolean = False Then
-                SerialPort3.WriteLine("robot has released tank")
-                SerialPort3.WriteLine("b61" & " send robot home")
-                Module1.ProcessA = 4
-                Timer7.Enabled = True
-                Exit While
-            End If
-        End While
+        'did robot release suction on tank? 10 seconds to say yes, might need to change logic in timer 2 to include this if statement
+        If Module1.ProcessA = 3 And Module1.robotHasSuctionBoolean = True Then
+            While Module1.ProcessA = 3 And Module1.robotHasSuctionBoolean = True
+                System.Threading.Thread.Sleep(1000)
+                Module1.counter8 += 1
+                SerialPort3.WriteLine(counter8 & " did robot release suction on the tank?")
+                If Module1.counter8 >= 10 Then
+                    Module1.Process = 99
+                    Timer1.Enabled = False
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
+                    MsgBox("Error, robot not releasing suction. Let buffing finish, then remove power and correct issue.")
+                    Exit While
+                ElseIf Module1.counter8 < 10 And Module1.robotHasSuctionBoolean = False Then
+                    SerialPort3.WriteLine("robot has released tank")
+                    SerialPort3.WriteLine("b61" & " send robot home")
+                    Module1.ProcessA = 4
+                    Timer7.Enabled = True
+                    Exit While
+                End If
+            End While
+        Else
+            SerialPort3.WriteLine("b61" & " send robot home")
+            Module1.ProcessA = 4
+        End If
 
-        'measure buffer2 buffing wheel diameter, set speed, turn buffer on, is method for measuring buffing wheel 2 identical to buffing wheel 1???
-        'move carriage to buffing wheel, center of tank should be lined up with buffing wheel,
+        'turn buffer 2 wheel on, move buffing wheel up to tank ends, carriage should  center of tank lined up with buffing wheel,
+        If Module1.ProcessA = 4 And Module1.ProcessD = 8 And Module1.robotInPositionBoolean = True Then
+            SerialPort2.WriteLine("!35" & " turn buffing wheel 2 on")
+            SerialPort2.WriteLine("$3F000E0")
+        End If
+
+
         'move carriage forward half of tank width plus 6 inches,
         'move carriage back tank width plus 12", Move buffer up 1 increment, Move carriage forward tank width plus 12, Move buffer up, repeat 40 times,
         'retract buffing wheel, Move To home position, Move cradle To home position, send tail stock To home position,
@@ -983,142 +996,212 @@ Public Class Form1
     End Sub
     'Buffer Station 2 buffing wheel measurement timer
     Private Sub Timer7_Tick(sender As Object, e As EventArgs) Handles Timer7.Tick
-        'to measure buffer2 buffing wheel
-        'home axis 4 and then home axis 3
+        'home axis 4
+        If ProcessD = 1 And Module1.endAxisFourOKBoolean = True Then
+            While Module1.endBufferWheelVerticalHomeSwitchBoolean = False
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelVerticalHomeSwitchBoolean = False Then
+                    Me.SerialPort2.WriteLine("$4R000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            While Module1.endBufferWheelVerticalHomeSwitchBoolean = True
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelVerticalHomeSwitchBoolean = True Then
+                    Me.SerialPort2.WriteLine("$4F000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            Module1.ProcessD = 2
+        End If
 
-        'once that's done, send buffing wheel up axis 4 35"
-        'send wheel forward 20", then begin measuring until switch is hit, once measurement is taken calculate RPM, move wheel back to home on axis 3
-        'move wheel back down to home on axis 4, tell timer 6 we're ready to go
+        'home axis 3
+        If ProcessD = 2 And Module1.endAxisThreeOKBoolean = True Then
+            While Module1.endBufferWheelHomeSwitchBoolean = False
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = False Then
+                    Me.SerialPort2.WriteLine("$3R000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            While Module1.endBufferWheelHomeSwitchBoolean = True
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = True Then
+                    Me.SerialPort2.WriteLine("$3F000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            Module1.ProcessD = 3
+        End If
 
-        'Get buffer2 wheel measurement and calculate RPM
-        If Module1.ProcessD = 1 And Module1.endAxisThreeOKBoolean = True And Module1.endBufferTwoMeasuringSwitchBoolean = False Then
+        'send wheel up axis 4 35"
+        If Module1.ProcessD = 3 And Module1.endAxisFourOKBoolean = True Then
+            SerialPort2.WriteLine("$4F035E0")
+            Module1.ProcessD = 4
+        End If
+
+        'measure buffer2 buffing wheel
+        If Module1.ProcessD = 4 And Module1.endAxisThreeOKBoolean = True And Module1.endAxisFourOKBoolean = True And Module1.endWheelMeasureSwitchBoolean = False Then
+            SerialPort2.WriteLine("$3F020E0")
+            Module1.ProcessD = 5
+        End If
+        If Module1.ProcessD = 5 And Module1.endAxisThreeOKBoolean = True And Module1.endWheelMeasureSwitchBoolean = False Then
             Me.SerialPort2.WriteLine("$3F000E4")
             Module1.endBufferWheelTwoDiameter -= 0.5
             Module1.axisThreeOKBoolean = False
-        ElseIf Module1.ProcessD = 2 And Module1.axisThreeOKBoolean = True And Module1.bufferOneMeasuringSwitchBoolean = True Then
-            If Module1.bufferWheelOneDiameter = 18 Or Module1.bufferWheelOneDiameter = 17.5 Then
-                'Me.SerialPort1.WriteLine("!11")
-                Me.SerialPort3.WriteLine("!11")
-                Module1.ProcessD = 3
-            ElseIf Module1.bufferWheelOneDiameter = 17 Or Module1.bufferWheelOneDiameter = 16.5 Then
-                'Me.SerialPort1.WriteLine("!12")
-                Me.SerialPort3.WriteLine("!12")
-                Module1.ProcessD = 3
-            ElseIf Module1.bufferWheelOneDiameter = 16 Or Module1.bufferWheelOneDiameter = 15.5 Then
-                'Me.SerialPort1.WriteLine("!13")
-                Me.SerialPort3.WriteLine("!13")
-                Module1.ProcessD = 3
-            ElseIf Module1.bufferWheelOneDiameter = 15 Or Module1.bufferWheelOneDiameter = 14.5 Then
-                'Me.SerialPort1.WriteLine("!14")
-                Me.SerialPort3.WriteLine("!14")
-                Module1.ProcessD = 3
-            ElseIf Module1.bufferWheelOneDiameter = 14 Or Module1.bufferWheelOneDiameter = 13.5 Then
-                Timer1.Enabled = False
-                Timer2.Enabled = False
-                Timer3.Enabled = False
-                Timer4.Enabled = False
+        ElseIf Module1.ProcessD = 5 And Module1.axisThreeOKBoolean = True And Module1.bufferOneMeasuringSwitchBoolean = True Then
+            If Module1.endBufferWheelTwoDiameter = 18 Or Module1.endBufferWheelTwoDiameter = 17.5 Then
+                Me.SerialPort2.WriteLine("!11")
+                Module1.ProcessD = 6
+            ElseIf Module1.endBufferWheelTwoDiameter = 17 Or Module1.endBufferWheelTwoDiameter = 16.5 Then
+                Me.SerialPort2.WriteLine("!12")
+                Module1.ProcessD = 6
+            ElseIf Module1.endBufferWheelTwoDiameter = 16 Or Module1.endBufferWheelTwoDiameter = 15.5 Then
+                Me.SerialPort2.WriteLine("!13")
+                Module1.ProcessD = 6
+            ElseIf Module1.endBufferWheelTwoDiameter = 15 Or Module1.endBufferWheelTwoDiameter = 14.5 Then
+                Me.SerialPort2.WriteLine("!14")
+                Module1.ProcessD = 6
+            ElseIf Module1.endBufferWheelTwoDiameter = 14 Or Module1.endBufferWheelTwoDiameter = 13.5 Then
+                Timer7.Enabled = False
                 Dim result As Integer
-                result = MessageBox.Show("Error, buffing wheel at 14 inches. Needs to be changed soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
-                If result = DialogResult.No Then
-                    Me.SerialPort1.WriteLine("!10" & " stop buffer wheel")
-                    Me.SerialPort1.WriteLine("!24" & " retract piston")
-                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
-                    While Module1.bufferWheelHomeSwitchBoolean = False
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
-                            Me.SerialPort1.WriteLine("$3R000E4")
-                            System.Threading.Thread.Sleep(300)
-                        End If
-                    End While
-                    While Module1.bufferWheelHomeSwitchBoolean = True
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
-                            Me.SerialPort1.WriteLine("$3F000E4")
-                            System.Threading.Thread.Sleep(300)
-                        End If
-                    End While
-                    Module1.bufferWheelOneDiameter = 18
-                    Module1.ProcessD = 1
-                    Timer1.Enabled = True
-                    Timer2.Enabled = True
-                    Timer3.Enabled = True
-                    Timer4.Enabled = True
-                    Module1.Process = 99
-                End If
-                If result = DialogResult.Yes Then
-                    'Me.SerialPort1.WriteLine("!15")
-                    Me.SerialPort3.WriteLine("!15")
-                    Module1.ProcessD = 3
-                    Timer3.Enabled = True
-                End If
-            ElseIf Module1.bufferWheelOneDiameter = 13 Then
-                Timer3.Enabled = False
-                Dim result As Integer
-                result = MessageBox.Show("Error, buffing wheel at 13 inches. Needs to be changed very soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
+                result = MessageBox.Show("Error. Buffer 2 buffing wheel at 14 inches. Needs to be changed soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
                 If result = DialogResult.No Then
                     Timer1.Enabled = False
-                    Timer2.Enabled = False
-                    Timer3.Enabled = False
-                    Timer4.Enabled = False
-                    Me.SerialPort1.WriteLine("!10" & " stop buffer wheel")
-                    Me.SerialPort1.WriteLine("!24" & " retract piston")
-                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
-                    While Module1.bufferWheelHomeSwitchBoolean = False
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
-                            Me.SerialPort1.WriteLine("$3R000E4")
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
+                    SerialPort2.WriteLine("!10" & " stop buffer wheel")
+                    Module1.endBufferWheelTwoRetract = (18 - Module1.endBufferWheelTwoDiameter) + 20
+                    Module1.endBufferWheelTwoRetractWholeNumber = Math.Truncate(Module1.endBufferWheelTwoRetract)
+                    Module1.endBufferWheelTwoRetractFraction = Module1.endBufferWheelTwoRetract - Module1.endBufferWheelTwoRetractWholeNumber
+                    SerialPort2.WriteLine("$3R0" & Module1.endBufferWheelTwoRetractWholeNumber & "E" & Module1.endBufferWheelTwoRetractFraction & " retract buffer wheel")
+                    System.Threading.Thread.Sleep(500)
+                    While Module1.endBufferWheelHomeSwitchBoolean = False
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort2.WriteLine("$3R000E4")
                             System.Threading.Thread.Sleep(300)
                         End If
                     End While
-                    While Module1.bufferWheelHomeSwitchBoolean = True
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
-                            Me.SerialPort1.WriteLine("$3F000E4")
+                    While Module1.endBufferWheelHomeSwitchBoolean = True
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort2.WriteLine("$3F000E4")
                             System.Threading.Thread.Sleep(300)
                         End If
                     End While
-                    Module1.bufferWheelOneDiameter = 18
+                    Module1.endBufferWheelTwoDiameter = 18
                     Module1.ProcessD = 1
-                    Timer1.Enabled = True
-                    Timer2.Enabled = True
-                    Timer3.Enabled = True
-                    Timer4.Enabled = True
+                    Timer1.Enabled = False
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
                     Module1.Process = 99
                 End If
                 If result = DialogResult.Yes Then
-                    'Me.SerialPort1.WriteLine("!16")
-                    Me.SerialPort3.WriteLine("!16")
-                    Module1.ProcessD = 3
-                    Timer3.Enabled = True
+                    SerialPort2.WriteLine("!15")
+                    Module1.ProcessD = 6
+                    Timer7.Enabled = True
                 End If
-            ElseIf Module1.bufferWheelOneDiameter < 13 Then
-                Timer1.Enabled = False
-                Timer2.Enabled = False
-                Timer3.Enabled = False
-                Timer4.Enabled = False
+            ElseIf Module1.endBufferWheelTwoDiameter = 13 Then
+                Timer7.Enabled = False
                 Dim result As Integer
-                result = MessageBox.Show("Error, buffing wheel must be changed.", "Error", MessageBoxButtons.OK)
-                If result = DialogResult.OK Then
-                    Me.SerialPort1.WriteLine("!24" & " retract piston")
-                    Me.SerialPort1.WriteLine("$3R007E4" & " retract buffer wheel")
-                    While Module1.bufferWheelHomeSwitchBoolean = False
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = False Then
-                            Me.SerialPort1.WriteLine("$3R000E4")
+                result = MessageBox.Show("Error. Buffer 2 buffing wheel at 13 inches. Needs to be changed very soon. Continue anyway?", "Error", MessageBoxButtons.YesNo)
+                If result = DialogResult.No Then
+                    Timer1.Enabled = False
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
+                    SerialPort2.WriteLine("!10" & " stop buffer wheel")
+                    Module1.endBufferWheelTwoRetract = (18 - Module1.endBufferWheelTwoDiameter) + 20
+                    Module1.endBufferWheelTwoRetractWholeNumber = Math.Truncate(Module1.endBufferWheelTwoRetract)
+                    Module1.endBufferWheelTwoRetractFraction = Module1.endBufferWheelTwoRetract - Module1.endBufferWheelTwoRetractWholeNumber
+                    SerialPort2.WriteLine("$3R0" & Module1.endBufferWheelTwoRetractWholeNumber & "E" & Module1.endBufferWheelTwoRetractFraction & " retract buffer wheel")
+                    System.Threading.Thread.Sleep(500)
+                    While Module1.endBufferWheelHomeSwitchBoolean = False
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort2.WriteLine("$3R000E4")
                             System.Threading.Thread.Sleep(300)
                         End If
                     End While
-                    While Module1.bufferWheelHomeSwitchBoolean = True
-                        If Module1.axisThreeOKBoolean = True And Module1.bufferWheelHomeSwitchBoolean = True Then
-                            Me.SerialPort1.WriteLine("$3F000E4")
+                    While Module1.endBufferWheelHomeSwitchBoolean = True
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort2.WriteLine("$3F000E4")
                             System.Threading.Thread.Sleep(300)
                         End If
                     End While
-                    Module1.bufferWheelOneDiameter = 18
+                    Module1.endBufferWheelTwoDiameter = 18
                     Module1.ProcessD = 1
-                    Timer1.Enabled = True
-                    Timer2.Enabled = True
-                    Timer3.Enabled = True
-                    Timer4.Enabled = True
+                    Timer1.Enabled = False
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
+                    Module1.Process = 99
+                End If
+                If result = DialogResult.Yes Then
+                    Me.SerialPort2.WriteLine("!16")
+                    Module1.ProcessD = 6
+                    Timer7.Enabled = True
+                End If
+            ElseIf Module1.endBufferWheelTwoDiameter < 13 Then
+                Timer1.Enabled = False
+                Timer6.Enabled = False
+                Timer7.Enabled = False
+                Timer8.Enabled = False
+                Dim result As Integer
+                result = MessageBox.Show("Error. Buffer 2 buffing wheel must be changed.", "Error", MessageBoxButtons.OK)
+                If result = DialogResult.OK Then
+                    Module1.endBufferWheelTwoRetract = (18 - Module1.endBufferWheelTwoDiameter) + 20
+                    Module1.endBufferWheelTwoRetractWholeNumber = Math.Truncate(Module1.endBufferWheelTwoRetract)
+                    Module1.endBufferWheelTwoRetractFraction = Module1.endBufferWheelTwoRetract - Module1.endBufferWheelTwoRetractWholeNumber
+                    SerialPort2.WriteLine("$3R0" & Module1.endBufferWheelTwoRetractWholeNumber & "E" & Module1.endBufferWheelTwoRetractFraction & " retract buffer wheel")
+                    System.Threading.Thread.Sleep(500)
+                    While Module1.endBufferWheelHomeSwitchBoolean = False
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = False Then
+                            Me.SerialPort2.WriteLine("$3R000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    While Module1.endBufferWheelHomeSwitchBoolean = True
+                        If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = True Then
+                            Me.SerialPort2.WriteLine("$3F000E4")
+                            System.Threading.Thread.Sleep(300)
+                        End If
+                    End While
+                    Module1.endBufferWheelTwoDiameter = 18
+                    Module1.ProcessD = 1
+                    Timer1.Enabled = False
+                    Timer6.Enabled = False
+                    Timer7.Enabled = False
+                    Timer8.Enabled = False
                     Module1.Process = 99
                 End If
             End If
         End If
+
+        'return wheel to home switch along axis 3
+        If ProcessD = 6 And Module1.endAxisThreeOKBoolean = True Then
+            Module1.endBufferWheelTwoRetract = (18 - Module1.endBufferWheelTwoDiameter) + 20
+            Module1.endBufferWheelTwoRetractWholeNumber = Math.Truncate(Module1.endBufferWheelTwoRetract)
+            Module1.endBufferWheelTwoRetractFraction = Module1.endBufferWheelTwoRetract - Module1.endBufferWheelTwoRetractWholeNumber
+            SerialPort2.WriteLine("$3R0" & Module1.endBufferWheelTwoRetractWholeNumber & "E" & Module1.endBufferWheelTwoRetractFraction & " retract buffer wheel")
+            System.Threading.Thread.Sleep(500)
+            While Module1.endBufferWheelHomeSwitchBoolean = False
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = False Then
+                    Me.SerialPort2.WriteLine("$3R000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            While Module1.endBufferWheelHomeSwitchBoolean = True
+                If Module1.endAxisThreeOKBoolean = True And Module1.endBufferWheelHomeSwitchBoolean = True Then
+                    Me.SerialPort2.WriteLine("$3F000E4")
+                    System.Threading.Thread.Sleep(300)
+                End If
+            End While
+            Module1.ProcessD = 7
+        End If
+
+        'return wheel to home switch along axis 4, tell timer 6 we're ready to go
+        If Module1.ProcessD = 7 And Module1.endAxisFourOKBoolean = True Then
+            SerialPort2.WriteLine("$4R035E0")
+            Module1.ProcessD = 8
+        End If
+
     End Sub
     'Buffer station 2 buffing process timer
     Private Sub Timer8_Tick(sender As Object, e As EventArgs) Handles Timer8.Tick
@@ -1448,16 +1531,14 @@ Public Class Form1
             incoming4 = 0
             incoming5 = 0
         End If
-        If incoming3 = 35 And incoming4 = 53 And incoming5 = 49 Then 'if #51, end tail stock home switch is on
-            Module1.endTailStockHomeSwitchBoolean = True
-            'SerialPort1.WriteLine("end tail stock home switch is on")
+        If incoming3 = 35 And incoming4 = 53 And incoming5 = 49 Then 'if #51, buffer wheel vertical home switch is on
+            Module1.endBufferWheelVerticalHomeSwitchBoolean = True
             incoming3 = 0
             incoming4 = 0
             incoming5 = 0
         End If
-        If incoming3 = 35 And incoming4 = 53 And incoming5 = 48 Then 'if #50, end tail stock home switch is off
-            Module1.endTailStockHomeSwitchBoolean = False
-            'SerialPort1.WriteLine("end tail stock home switch is off")
+        If incoming3 = 35 And incoming4 = 53 And incoming5 = 48 Then 'if #50, buffer wheel vertical home switch is off
+            Module1.endBufferWheelVerticalHomeSwitchBoolean = False
             incoming3 = 0
             incoming4 = 0
             incoming5 = 0
